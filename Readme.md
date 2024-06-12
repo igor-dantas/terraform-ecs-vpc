@@ -1,4 +1,4 @@
-## Sistema operacional
+i## Sistema operacional
 O sistema operacional usado para este tutorial é linux, caso você não use linux, considere pesquisar comandos equivalentes para o seu sistema operacional.
 
 Pré-requisitos
