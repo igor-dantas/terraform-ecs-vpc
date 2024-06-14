@@ -1,10 +1,29 @@
+# Criando um cluster ECS, vpc e load balancer
+Este repositório tem o objetivo de demonstrar como posso subir containers na AWS utilizando ECS.
+---
+## Sumário
+1. [Sistema operacional](#sistema-operacional)
+2. [Configurando AWS-CLI](#configurando-aws-cli)
+3. [Pré-requisitos](#pré-requisitos)
+4. [Arquitetura](#arquitetura)
+5. [Terraform WorkFlow](#terraform-workflow)
+6. [Configurando AWS VPC](#configurando-aws-vpc)
+7. [Criando Subnet](#criando-subnet)
+8. [Criando Internet Gateway](#criando-internet-gateway)
+9. [Criando Nat Gateway](#criando-nat-gateway)
+10. [IAM](#iam)
+11. [Cluster ECS](#cluster-ecs)
+12. [Application Load Balancer](#application-load-balancer)
+---
 ## Sistema operacional
 O sistema operacional usado para este tutorial é linux, caso você não use linux, considere pesquisar comandos equivalentes para o seu sistema operacional.
 
-Pré-requisitos
-- terraform
-- awscli
-- conta na aws
+**Distro: Ubuntu 22.04**
+
+## Pré-requisitos
+- **Terraform**: o Terraform será nossa ferramenta de infra as code.
+- **awscli**: awscli será a forma como iremos nos comunicar com a AWS, via chamada de api
+- **Conta na AWS**: Será onde irá ser provisionado os recursos em cloud
 
 ## Criando diretório de trabalho
 
@@ -104,12 +123,17 @@ terraform init
 esse comando vai baixar tudo que você configurou no seu provider e iniciar o seu backend que é onde vai ficar salvo o tfstate
 
 ## Configurando AWS VPC
+O que é vpc?
+Basicamente um rede virtual privada em cloud, que nos permite criar um ambiente isolado em nuvem.
+
 Rode o comando abaixo para criar o arquivo que irá conter configurações de rede do nosso projeto
 ```shell
 touch network.tf
 ```
 
-É muito importante, que durante essa jornada com terraform você aprenda a se locomover na documentação dele, nosso caso agora, se você pesquisar por terraform aws vpc resource no google, você irá encontrar uma documentação com o recurso que queremos configurar que é a vpc, nos trará o seguinte trecho de código
+É muito importante, que durante essa jornada com terraform você aprenda a se locomover na documentação dele, nosso caso agora, se você pesquisar por terraform aws vpc resource no google, você irá encontrar uma documentação com o recurso que queremos configurar que é a vpc.
+
+https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc
 
 ```shell
 resource "aws_vpc" "main" {
@@ -129,7 +153,7 @@ https://www.vultr.com/resources/subnet-calculator/
 Para o nosso caso usaremos um ip de exemplo.
 
 ## Criando Subnet
-Para nossa arquitetura, iremos criar 4 subnets, 2 pública e 2 privada, "ah Igor mas o que caracteriza uma subnet ser publica ou privada?", subnet publica é toda subnet que possui rotas para internet gateway, ou seja, por meio do IGW meu serviço consegue se comunicar com a internet, e a subnet privada por sua vez é uma subnet isolada da internet, e não possui rotas diretas para o internet gateway, subnets privadas só possuem comunicação com a internet por meio de um NAT gateway que reside em uma subnet publica, permitindo requisições de saída da subnet mas não de entrada
+Para nossa arquitetura, iremos criar 4 subnets, 2 pública e 2 privada, "ah Igor mas o que caracteriza uma subnet ser publica ou privada?", subnet publica é toda subnet que possui rotas para um internet gateway, ou seja, por meio do IGW meu serviço consegue se comunicar com a internet, e a subnet privada por sua vez é uma subnet isolada da internet, e não possui rotas diretas para o internet gateway, subnets privadas só possuem comunicação com a internet por meio de um NAT gateway que reside em uma subnet publica, permitindo requisições de saída da subnet mas não de entrada
 
 para o nosso caso, podemos criar o recurso de subnet duas vezes para simbolizar a subnet publica e a privada, logo após configuraremos o route table para que elas façam jus ao nome privada ou publica
 
@@ -228,6 +252,9 @@ resource "aws_nat_gateway" "nat-ecs-demo" {
 ```
 
 ## IAM
+O que é o IAM?
+Basicamente, é o recurso da AWS que nos permite gerenciar politicas de acesso, grupos de acessos e usuários.
+
 -> Crie um arquivo iam.tf
 
 ```shell
