@@ -7,6 +7,7 @@ Pré-requisitos
 - conta na aws
 
 ## Criando diretório de trabalho
+
 ```shell
 mkdir terraform-ecs-vpc/
 cd terraform-ecs-vpc
@@ -23,10 +24,13 @@ cd terraform-ecs-vpc
 - Criando usuário
     - Crie um usuário na aws, com permissão de administrador
     - Crie as chaves programáticas dele para poder ter acesso ao aws cli
+
 depois rode o seguinte comando:
+
 ```shell
 aws configure --profile terraform-profile 
 ```
+
 -> o nome do profile pode ser qualquer um da sua escolha, após rodar este comando ele vai te pedir:
 - Access Key Id
 - Secret Acess Key
@@ -34,9 +38,17 @@ aws configure --profile terraform-profile
 - Default output format -> json
 
 logo após rode este comando para verificar se realmente você está usando o perfil criado
+
 ```shell
 aws sts get-caller-identity
 ```
+
+---
+
+## Terraform WorkFlow
+
+![Workflow](./gif-arquitetura/azure-terraform-workflow-2.png)
+
 ## Criando provider.tf
 Use o comando abaixo para criar o arquivo para o provider
 ```shell
@@ -45,7 +57,7 @@ touch provider.tf
 https://registry.terraform.io/providers/hashicorp/aws/latest
 
 
-```
+```shell
 terraform {
   required_providers {
     aws = {
@@ -72,20 +84,7 @@ touch backend.tf
 ```
 Iniciando backend:
 
-```
-terraform {
-  backend "s3" {
-    bucket = "mybucket" # nome do bucket
-    key    = "path/to/my/key" # pode ter o mesmo s3 armazenando tudo basta colocar um diretório especifico para cada tfstate
-    region = "us-east-1"
-  }
-}
-```
-https://developer.hashicorp.com/terraform/language/settings/backends/s3
-
-para o nosso caso, para seguirmos boas práticas, na variavel key vamos criar um diretório de dev portanto, vai ficar assim:
-
-```
+```shell
 terraform {
   backend "s3" {
     bucket = "mybucket" 
@@ -94,10 +93,11 @@ terraform {
   }
 }
 ```
+https://developer.hashicorp.com/terraform/language/settings/backends/s3
 
 Depois que você criou o arquivo de provider e backend, rode o seguinte comando:
 
-```
+```shell
 terraform init
 ```
 
@@ -111,18 +111,7 @@ touch network.tf
 
 É muito importante, que durante essa jornada com terraform você aprenda a se locomover na documentação dele, nosso caso agora, se você pesquisar por terraform aws vpc resource no google, você irá encontrar uma documentação com o recurso que queremos configurar que é a vpc, nos trará o seguinte trecho de código
 
-```
-resource "aws_vpc" "main" {
-  cidr_block       = "10.0.0.0/16"
-  instance_tenancy = "default"
-
-  tags = {
-    Name = "main"
-  }
-}
-```
-para o nosso caso, o trecho ficará assim:
-```
+```shell
 resource "aws_vpc" "main" {
   cidr_block       = "10.0.0.0/16"
 
@@ -136,52 +125,55 @@ Uma coisa que muitos arquitetos pecam as vezes na hora de fazer a arquitetura de
 
 para realizar os cálculos de range de ip, recomendo esse site:
 https://www.vultr.com/resources/subnet-calculator/
-com ele vamos conseguir calcular os nossos ranges de ip
+
+Para o nosso caso usaremos um ip de exemplo.
 
 ## Criando Subnet
-Para nossa arquitetura, como é para fins de demonstração, iremos criar 2 subnets, 1 pública e 1 privada, "ah Igor mas o que caracteriza uma subnet ser publica ou privada?", subnet publica é toda subnet que possui rotas para io nternet gateway, ou seja, por meio do IGW meu serviço consegue se comunicar com a internet, e a subnet privada por sua vez é uma subnet isolada da internet, e não possui rotas diretas para o internet gateway, subnets privadas só possuem comunicação com a internet por meio de um NAT gateway que reside em uma subnet publica, permitindo requisições de saída da subnet mas não de entrada
+Para nossa arquitetura, iremos criar 4 subnets, 2 pública e 2 privada, "ah Igor mas o que caracteriza uma subnet ser publica ou privada?", subnet publica é toda subnet que possui rotas para internet gateway, ou seja, por meio do IGW meu serviço consegue se comunicar com a internet, e a subnet privada por sua vez é uma subnet isolada da internet, e não possui rotas diretas para o internet gateway, subnets privadas só possuem comunicação com a internet por meio de um NAT gateway que reside em uma subnet publica, permitindo requisições de saída da subnet mas não de entrada
 
 para o nosso caso, podemos criar o recurso de subnet duas vezes para simbolizar a subnet publica e a privada, logo após configuraremos o route table para que elas façam jus ao nome privada ou publica
-```
-resource "aws_subnet" "subnet_public" {
-  vpc_id     = aws_vpc.vpc-ecs-demo.id
-  cidr_block = "10.0.0.0/24"
 
+```shell
+resource "aws_subnet" "subnet_public_1a" {
+  vpc_id            = aws_vpc.vpc-ecs-demo.id
+  cidr_block        = "10.0.1.0/24"
+  availability_zone = "us-east-1a"
   tags = {
-    Name = "subnet-publica-ecs-demo"
+    Name = "subnet-public-ecs-demo-a"
+  }
+}
+
+```
+
+```shell
+resource "aws_subnet" "subnet_public_1b" {
+  vpc_id            = aws_vpc.vpc-ecs-demo.id
+  cidr_block        = "10.0.2.0/24"
+  availability_zone = "us-east-1b"
+  tags = {
+    Name = "subnet-public-ecs-demo-b"
   }
 }
 ```
 
-```
-resource "aws_subnet" "subnet_public" {
-  vpc_id     = aws_vpc.vpc-ecs-demo.id
-  cidr_block = "10.0.1.0/24"
-
+```shell
+resource "aws_subnet" "subnet_private_1a" {
+  vpc_id            = aws_vpc.vpc-ecs-demo.id
+  cidr_block        = "10.0.3.0/24"
+  availability_zone = "us-east-1a"
   tags = {
-    Name = "subnet-publica-ecs-demo"
+    Name = "subnet-private-ecs-demo"
   }
 }
 ```
 
-```
-resource "aws_subnet" "subnet_private" {
-  vpc_id     = aws_vpc.vpc-ecs-demo.id
-  cidr_block = "10.0.2.0/24"
-
+```shell
+resource "aws_subnet" "subnet_private_1b" {
+  vpc_id            = aws_vpc.vpc-ecs-demo.id
+  cidr_block        = "10.0.4.0/24"
+  availability_zone = "us-east-1b"
   tags = {
-    Name = "subnet-privada-ecs-demo"
-  }
-}
-```
-
-```
-resource "aws_subnet" "subnet_private" {
-  vpc_id     = aws_vpc.vpc-ecs-demo.id
-  cidr_block = "10.0.3.0/24"
-
-  tags = {
-    Name = "subnet-privada-ecs-demo"
+    Name = "subnet-private-ecs-demo"
   }
 }
 ```
@@ -191,7 +183,7 @@ https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/subn
 ## Criando Internet Gateway
 Agora faremos a criação do internet gateway, que vai ser o responsável por ligar a nossa arquitetura de rede ao mundo externo
 
-```
+```shell
 resource "aws_internet_gateway" "igw-ecs-demo" {
   vpc_id = aws_vpc.vpc-ecs-demo.id
 
@@ -203,7 +195,7 @@ resource "aws_internet_gateway" "igw-ecs-demo" {
 
 o internet gateway ele fica atrelado a vpc, portanto a ligação dele é pelo Id da vpc, mas para que a gente consiga realizar essa conexão precisamos usar um outro recurso do terraform:
 
-```
+```shell
 resource "aws_internet_gateway_attachment" "igw-attach-ecs-demo" {
   internet_gateway_id = aws_internet_gateway.example.id
   vpc_id              = aws_vpc.example.id
@@ -216,7 +208,7 @@ https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/nat_
 
 Teremos que criar um elastic Ip para colocar no Nat gateway, pois ele será o nosso ponto de saída da rede e logo após fazemos a criação do recurso
 
-```
+```shell
 resource "aws_eip" "eip-ngw-ecs-demo" {
   domain = "vpc"
   tags = {
@@ -236,9 +228,15 @@ resource "aws_nat_gateway" "nat-ecs-demo" {
 ```
 
 ## IAM
-Nós iremos utilizar uma policy que ja vem por padrão em toda conta da aws para atribuir a Role de execution task
+-> Crie um arquivo iam.tf
 
+```shell
+touch iam.tf
 ```
+
+Nós iremos utilizar uma politica que ja vem por padrão em toda conta da aws para atribuir a Role de execution task
+
+```shell
 resource "aws_iam_role" "ecs_task_execution_role" {
   name = "ecs_task_execution_role"
 
@@ -263,13 +261,18 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy_attachment"
 ```
 
 ## Cluster ECS
+-> Crie um arquivo ecs.tf
+
+```shell
+touch ecs.tf
+```
 
 Vamos fazer a criação do cluster ecs, nesse momento iremos ter algumas etapas para a criação até o container ficar acessível de fato
 
 
 -> Criando cluster
 
-```
+```shell
 resource "aws_ecs_cluster" "ecs-cluster-demo" {
   name = "ecs-cluster-demo"
 }
@@ -281,7 +284,7 @@ https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_
 
 Nessa etapa, vamos usar um resource do terraform para informar para o nosso cluster que iremos usar o tipo de computação Fargate.
 
-```
+```shell
 resource "aws_ecs_cluster_capacity_providers" "ecs-capacity_provider-demo" {
   cluster_name = aws_ecs_cluster.ecs-cluster-demo.name
 
@@ -301,7 +304,7 @@ https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_
 
 Iremos criar um resource que basicamente informa para o ECS, todos os detalhes sobre o container, porta, imagem, quantidade de recurso, é aqui que caso sua aplicação tenha variaveis de ambiente você irá colocar e aqui também será informada a task execution role
 
-```
+```shell
 resource "aws_ecs_task_definition" "task-definition-demo" {
   family                   = "task-definition-demo"
   requires_compatibilities = ["FARGATE"]
@@ -334,7 +337,7 @@ https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_
 
 Este será o recurso do ECS que irá direcionar o tráfego para o container e gerenciar a execução de tarefas 
 
-```
+```shell
 resource "aws_ecs_service" "service-ecs-demo" {
   name            = "service-ecs-demo"
   cluster         = aws_ecs_cluster.ecs-cluster-demo.id
@@ -362,13 +365,46 @@ resource "aws_ecs_service" "service-ecs-demo" {
   ]
 }
 ```
+https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_service
+
+
+-> Criando os security groups do cluster ECS
+
+```shell
+resource "aws_security_group" "ecs_sg" {
+  name        = "ecs-sg"
+  description = "Security group for ECS"
+  vpc_id      = aws_vpc.vpc-ecs-demo.id
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+```
+https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group
 
 ## Application Load Balancer
+-> Crie um arquivo alb.tf
+
+```shell
+touch alb.tf
+```
 
 Para que nós possamos acessar a nossa aplicação, iremos utilizar um ALB para ser a ponte entre uma subnet publica e uma subnet privada
 
+https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb
 
-```
+```shell
 resource "aws_lb" "alb" {
   name               = "alb-demo"
   internal           = false
@@ -378,7 +414,11 @@ resource "aws_lb" "alb" {
 
   enable_deletion_protection = false
 }
+```
 
+-> Target group
+
+```shell
 resource "aws_lb_target_group" "ecs-tg-demo" {
   name        = "ecs-tg-demo"
   port        = 80
@@ -396,7 +436,11 @@ resource "aws_lb_target_group" "ecs-tg-demo" {
       interval              = 30
   }
 }
+```
 
+-> Listener
+
+```shell
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.alb.arn
   port              = "80"
@@ -407,7 +451,11 @@ resource "aws_lb_listener" "http" {
     target_group_arn = aws_lb_target_group.ecs-tg-demo.arn
   }
 }
+```
 
+-> Security Group do ALB
+
+```shell
 resource "aws_security_group" "alb_sg" {
   name        = "alb-sg"
   description = "Security group for ALB"
