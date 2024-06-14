@@ -12,6 +12,10 @@ mkdir terraform-ecs-vpc/
 cd terraform-ecs-vpc
 ```
 
+## Arquitetura
+
+![Arquitetura](./gif-arquitetura/Gravação%20de%20tela%20de%2013-06-2024%2021_40_41.gif)
+
 ## Configurando AWS-CLI
 - Instalação
             nessa documentação você consegue instalar o aws cli para diferentes plataformas
