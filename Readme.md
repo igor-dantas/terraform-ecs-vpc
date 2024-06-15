@@ -226,6 +226,33 @@ resource "aws_internet_gateway_attachment" "igw-attach-ecs-demo" {
 }
 ```
 
+Tabela de rotas:
+
+```shell
+resource "aws_route_table" "rtb-public-ecs-demo" {
+  vpc_id = aws_vpc.vpc-ecs-demo.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw-ecs-demo.id
+  }
+
+  tags = {
+    Name = "rtb-public-ecs-demo"
+  }
+}
+
+resource "aws_route_table_association" "public_subnet_assoc_a" {
+  subnet_id      = aws_subnet.subnet_public_1a.id
+  route_table_id = aws_route_table.rtb-public-ecs-demo.id
+}
+
+resource "aws_route_table_association" "public_subnet_assoc_b" {
+  subnet_id      = aws_subnet.subnet_public_1b.id
+  route_table_id = aws_route_table.rtb-public-ecs-demo.id
+}
+```
+
 ## Criando Nat Gateway
 
 https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/nat_gateway
@@ -251,6 +278,32 @@ resource "aws_nat_gateway" "nat-ecs-demo" {
 }
 ```
 
+Tabelas de rota
+
+```shell
+resource "aws_route_table" "rtb-private-ecs-demo" {
+  vpc_id = aws_vpc.vpc-ecs-demo.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat-ecs-demo.id
+  }
+
+  tags = {
+    Name = "rtb-private-ecs-demo"
+  }
+}
+
+
+resource "aws_route_table_association" "private_subnet_1c_assoc" {
+  subnet_id      = aws_subnet.subnet_private_1a.id
+  route_table_id = aws_route_table.rtb-private-ecs-demo.id
+}
+resource "aws_route_table_association" "private_subnet_1d_assoc" {
+  subnet_id      = aws_subnet.subnet_private_1b.id
+  route_table_id = aws_route_table.rtb-private-ecs-demo.id
+}
+```
 ## IAM
 O que é o IAM?
 Basicamente, é o recurso da AWS que nos permite gerenciar politicas de acesso, grupos de acessos e usuários.
