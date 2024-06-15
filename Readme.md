@@ -107,7 +107,7 @@ Iniciando backend:
 terraform {
   backend "s3" {
     bucket = "mybucket" 
-    key    = "dev/" 
+    key    = "dev/terraform.tfstate" 
     region = "us-east-1"
   }
 }
@@ -136,7 +136,7 @@ touch network.tf
 https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc
 
 ```shell
-resource "aws_vpc" "main" {
+resource "aws_vpc" "vpc-ecs-demo" {
   cidr_block       = "10.0.0.0/16"
 
   tags = {
@@ -210,21 +210,12 @@ Agora faremos a criação do internet gateway, que vai ser o responsável por li
 ```shell
 resource "aws_internet_gateway" "igw-ecs-demo" {
   vpc_id = aws_vpc.vpc-ecs-demo.id
-
   tags = {
-    Name = "internet-gateway-ecs-demo"
+    Name = "igw-ecs-demo"
   }
 }
 ```
 
-o internet gateway ele fica atrelado a vpc, portanto a ligação dele é pelo Id da vpc, mas para que a gente consiga realizar essa conexão precisamos usar um outro recurso do terraform:
-
-```shell
-resource "aws_internet_gateway_attachment" "igw-attach-ecs-demo" {
-  internet_gateway_id = aws_internet_gateway.example.id
-  vpc_id              = aws_vpc.example.id
-}
-```
 
 Tabela de rotas:
 
@@ -554,5 +545,20 @@ resource "aws_security_group" "alb_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
+```
+
+-> Output
+
+os resources do terraform quando são criados eles tem algumas informações do serviços e uma forma da gente pegar essas informações é usando o output
+
+```shell
+touch output.tf
+```
+
+Nesse caso iremos pegar apenas o dns do load balancer, depois que ele é criado para facilitar o acesso
+```shell
+output "dns_load_balancer" {
+  value = aws_lb.alb.dns_name
 }
 ```
